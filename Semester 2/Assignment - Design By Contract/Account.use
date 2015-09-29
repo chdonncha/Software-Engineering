@@ -1,0 +1,136 @@
+-- model Name =...
+model Account
+
+-- declare and populate classes with variables and value types...
+
+--Invoice
+class Invoice
+attributes
+	number : String
+	amount : Real
+end
+
+--ReceivablesAccount
+class ReceivablesAccount
+attributes
+	number : String
+	currentBalance : Real
+	_30DayBalance : Real
+	_60DayBalance : Real
+	_90DayBalance : Real
+	_120DayBalance : Real
+	collections : Real
+end
+
+--Customer
+class Customer
+attributes
+	id : String
+	firstName : String
+	lastName : String
+	address1 : String
+	address2 : String
+	city : String
+	state : String
+	zip : String
+	telHome : String
+	telWork : String
+end
+
+--ARProcessor
+class ARProcessor
+operations
+ProcessInvoices(arAccounts : Set(ReceivablesAccount))
+	-- begin operation
+	begin
+	
+		-- create forloop to process unprocessed invoices, is later called in .SOIL code
+		for arAccount in arAccounts do
+		
+			for invoice in arAccount.unProcessedInvoices do
+				insert (invoice, arAccount) into ProcessedInvoices;
+				delete (invoice, arAccount) from UnprocessedPInvoices;
+				
+			end
+			
+		end
+		
+	-- end operation
+	end
+-- update at end of the month
+EndOfMonthUpdate(arAccounts : Set(ReceivablesAccount))
+end
+
+-- create associations between classes
+
+-- Associations
+
+	-- association between unProcessedInvoices & unProcessedReceivables
+	association UnprocessedPInvoices between
+		Invoice[0..*] role unProcessedInvoices
+		ReceivablesAccount[0..1] role unProcessedReceivables		
+	end
+
+	-- association between ProcessInvoices & processedReceivables
+	association ProcessedInvoices between
+		Invoice[0..*] role processedInvoices
+		ReceivablesAccount[0..1] role processedReceivables
+	end
+
+	-- association between customer & receivables
+	association CustomerReceivables between
+		Customer[1] role customer
+		ReceivablesAccount[0..1] role receivables
+	end
+
+constraints
+
+ --ReceivablesAccount invariants
+
+context ReceivablesAccount
+	inv invoiceNumberLength:
+		self.number.size() = 6
+
+context ReceivablesAccount		
+	inv inv2:
+		unProcessedInvoices->intersection(processedInvoices)->isEmpty()
+
+--ARProcessor::ProcessInvoices pre-conditions
+		
+context ARProcessor::ProcessInvoices(arAccounts : Set(ReceivablesAccount))
+	pre pre1:
+		arAccounts->forAll(unProcessedInvoices->notEmpty())
+		
+--ARProcessor::ProcessInvoices post-conditions
+--unProcessedInvoices become processedInvoices.
+
+context ARProcessor::ProcessInvoices(arAccounts : Set(ReceivablesAccount))
+	post post1:
+			arAccounts->forAll(unProcessedInvoices->isEmpty() and
+			processedInvoices->includesAll(unProcessedInvoices@pre))
+		
+--ARProcessor::EndOfMonthUpdate pre-conditions
+--There are no unprocessed invoices
+
+context ARProcessor::EndOfMonthUpdate(arAccounts : Set(ReceivablesAccount))
+	pre pre1:
+	--arAccounts.currentBalance = 100.00
+
+		arAccounts->forAll(unProcessedInvoices->isEmpty())
+
+--ARProcessor::EndOfMonthUpdate post-conditions
+
+--context ARProcessor::EndOfMonthUpdate (arAccounts : ReceivablesAccount)
+	--post post1 salaryProcessed:
+	
+	context ARProcessor::EndOfMonthUpdate (arAccounts : Set(ReceivablesAccount))
+	post salaryProcessed:
+			arAccounts->forAll(
+				currentBalance = 0 and
+				_30DayBalance = currentBalance@pre and
+				_60DayBalance = _30DayBalance@pre and
+				_90DayBalance = _60DayBalance@pre and
+				_120DayBalance = _90DayBalance@pre and
+				collections = collections@pre + _120DayBalance@pre
+			)
+		

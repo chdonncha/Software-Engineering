@@ -1,0 +1,76 @@
+-- create class objects
+!create ibm : Invoice
+!create microsoft : Invoice
+!create apple : Invoice
+!create john : Customer
+!create ben : Customer
+!create account : ReceivablesAccount
+!create processor : ARProcessor
+
+-- insert into object ibm
+	!ibm.number := ’10016’
+	!ibm.amount := 1290.75
+	
+-- insert into object microsoft
+	!microsoft.number := '11002'
+	!microsoft.amount := 2020.05
+
+-- insert into object apple
+	!apple.number := '1337'
+	!apple.amount := 750.50
+	
+--insert into object account
+	!account.number := '123456'
+	!account.currentBalance := 0
+	!account._30DayBalance := 75.50
+	!account._60DayBalance := 120.00
+	!account._90DayBalance := 230.10
+	!account._120DayBalance := 340.15
+	!account.collections := 505.95
+	
+-- insert into object john
+	!john.id := ’101’
+	!john.firstName := 'John'
+	!john.lastName := 'Doe'
+	!john.address1 := '22 Templeroan View'
+	!john.address2 := 'Knocklyon'
+	!john.city := 'Dublin'
+	!john.state := 'Dublin'
+	!john.zip := '16'
+	!john.telHome := '4928478'
+	!john.telWork := '087-1539847'
+	
+-- insert into object ben
+	!ben.id := '103'
+	!ben.firstName := 'Ben'
+	!ben.lastName := 'McDonnell'
+	!ben.address1 := '13 Prospect Heights'
+	!ben.address2 := 'Dundrum'
+	!ben.city := 'Dublin'
+	!ben.state := 'Dublin'
+	!ben.zip := '14'
+	!ben.telHome := '4938277'
+	!ben.telWork := '083-3692918'
+	
+-- create associations
+	!insert (ibm, account) into UnprocessedPInvoices
+	!insert (microsoft, account) into UnprocessedPInvoices
+	!insert (apple, account) into UnprocessedPInvoices
+	!insert (john, account) into CustomerReceivables
+	!insert (ben, account) into CustomerReceivables
+
+-- run .USE operation to process the unprocessed invoices
+!processor.ProcessInvoices(Set{account})
+
+-- openter to test the precondition(s)
+!openter processor EndOfMonthUpdate(Set{account})
+!set account.collections := account.collections + account._120DayBalance
+!set account._120DayBalance := account._90DayBalance
+!set account._90DayBalance := account._60DayBalance
+!set account._60DayBalance := account._30DayBalance
+!set account._30DayBalance := account.currentBalance
+!set account.currentBalance := 0
+-- output post condition(s)
+!opexit
+
+
